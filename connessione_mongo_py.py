@@ -18,14 +18,14 @@ collection = db['concerti']
 
 # Funzione che consente la ricerca per artista sfruttando l'operatore '$regex' di MongoDB per rendere la ricerca case insensitive
 def ricerca_per_artista(artista):
-    concerti = collection.find({'artista.nome': {'$regex' : artista, '$options' : 'i'},
+    concerti = collection.find({'artista.nome': {'$regex' : artista, '$options' : 'i'}},
                                 {'_id':0, 'artista.tipo':1, 'artista.nome':1, 'nome_concerto': 1, 'artista.descrizione':1, 'luogo.nome':1, 'luogo.data':1, 'data':1})
     return list(concerti)
 
 
 # Funzione che consente la ricerca per nome del concerto sfruttando l'operatore '$regex' di MongoDB per rendere la ricerca case insensitive
 def ricerca_per_concerto(concerto):
-    concerti = collection.find({'nome_concerto': {'$regex' : concerto, '$options' : 'i'},
+    concerti = collection.find({'nome_concerto': {'$regex' : concerto, '$options' : 'i'}},
                                 {'_id':0, 'artista.tipo':1 , 'artista.nome':1, 'nome_concerto': 1, 'artista.descrizione':1, 'luogo.nome':1, 'luogo.data':1, 'data':1})
     return list(concerti)
 
@@ -37,9 +37,9 @@ Descrizione: {concerto['artista']['descrizione']};
 Luogo: {concerto['luogo']['nome']};
 Data: {concerto['data']};""")
 
-    if concerto['artista']['tipo']=='band':
+    """if concerto['artista']['tipo']=='band':
         for membro in concerto['artista']['membri']:
-            print("- Nome:", membro['nome'], "| Strumento:", membro['strumento'])
+            print("- Nome:", membro['nome'], "| Strumento:", membro['strumento'])"""
 
 def main():
     while True:
