@@ -53,14 +53,21 @@ def main():
         if scelta == '1':
             input_artista = input("Inserisci il nome dell'artista:  ")
             concerti_con_artista = ricerca_per_artista(input_artista)
-            for concerto in concerti_con_artista:
-                mostra_concerto(concerto)
+            if input_artista in concerti_con_artista:
+                for concerto in concerti_con_artista:
+                    mostra_concerto(concerto)
+            else:
+                print("Non è stato trovato nessun concerto che corrisponda ai criteri di ricerca")
 
         elif scelta == '2':
             input_concerto = input("Inserisci il nome del concerto: ")
             concerti_con_nome = ricerca_per_concerto(input_concerto)
-            for concerto in concerti_con_nome:
-                mostra_concerto(concerto)
+
+            if input_concerto in concerti_con_nome:
+                for concerto in concerti_con_nome:
+                    mostra_concerto(concerto)
+            else:
+                print("Non è stato trovato nessun concerto che corrisponda ai criteri di ricerca")
 
         elif scelta == '3':
             break
