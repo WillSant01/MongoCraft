@@ -16,13 +16,17 @@ except Exception as e:
 db = client['ticket_one']
 collection = db['concerti']
 
+# Funzione che consente la ricerca per artista sfruttando l'operatore '$regex' di MongoDB per rendere la ricerca case insensitive
 def ricerca_per_artista(artista):
-    concerti = collection.find({'artista.nome': artista}, {'_id':0, 'artista.tipo':1, 'artista.nome':1, 'nome_concerto': 1, 'artista.descrizione':1, 'luogo.nome':1, 'luogo.data':1, 'data':1})
+    concerti = collection.find({'artista.nome': {'$regex' : artista, '$options' : 'i'},
+                                {'_id':0, 'artista.tipo':1, 'artista.nome':1, 'nome_concerto': 1, 'artista.descrizione':1, 'luogo.nome':1, 'luogo.data':1, 'data':1})
     return list(concerti)
 
 
+# Funzione che consente la ricerca per nome del concerto sfruttando l'operatore '$regex' di MongoDB per rendere la ricerca case insensitive
 def ricerca_per_concerto(concerto):
-    concerti = collection.find({'nome_concerto': concerto}, {'_id':0, 'artista.tipo':1 , 'artista.nome':1, 'nome_concerto': 1, 'artista.descrizione':1, 'luogo.nome':1, 'luogo.data':1, 'data':1})
+    concerti = collection.find({'nome_concerto': {'$regex' : concerto, '$options' : 'i'},
+                                {'_id':0, 'artista.tipo':1 , 'artista.nome':1, 'nome_concerto': 1, 'artista.descrizione':1, 'luogo.nome':1, 'luogo.data':1, 'data':1})
     return list(concerti)
 
 def mostra_concerto(concerto):
