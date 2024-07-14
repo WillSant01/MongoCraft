@@ -69,7 +69,6 @@ def acquista_biglietti():
                 'mail': input("Inserisci la tua Mail: ")
                 },
             "concerto_id": concerto["_id"],
-            "nome_concerto": concerto['nome_concerto'],
             "quantità": num_biglietti,
             "prezzo_totale": prezzo_totale,
             "data_acquisto": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -91,12 +90,6 @@ def acquista_biglietti():
                 {"utente.nome": acquisto['utente']['nome']},  # Filtro per selezionare il documento da aggiornare
                 {"$push": {"storico": biglietti["_id"]}}      # Documento di aggiornamento
                 )
-        
-        #if utente:
-            #collection_acquisti.update_one(
-                #{"$push": {"storico": acquisto["storico"]}}   
-            #)
-            
         else:
             collection_acquisti.insert_one(acquisto)
         
@@ -104,19 +97,99 @@ def acquista_biglietti():
     else:
         print("Concerto non trovato o biglietti esauriti.")
 
+def mostra_storico(user):
+    pipeline = [
+        {
+            "$match": {
+                "utente.nome": user  # Filtro per l'utente specifico
+            }
+        },
+        {
+            "$unwind": "$storico"
+        },
+        {
+            "$lookup": {
+                "from": "biglietti",
+                "localField": "storico",
+                "foreignField": "_id",
+                "as": "biglietto_info"
+            }
+        },
+        {
+            "$unwind": "$biglietto_info"
+        },
+        {
+            "$lookup": {
+                "from": "concerti",
+                "localField": "biglietto_info.concerto_id",
+                "foreignField": "_id",
+                "as": "concerto_info"
+            }
+        },
+        {
+            "$unwind": "$concerto_info"
+        },
+        {
+            "$project": {
+                "_id": 0,
+                "utente": "$utente",
+                "nome_concerto": "$concerto_info.nome_concerto",
+                "artista": "$concerto_info.artista",
+                "luogo": "$concerto_info.luogo",
+                "data": "$concerto_info.data",
+                "prezzo_totale": "$biglietto_info.prezzo_totale",
+                "quantità": "$biglietto_info.quantità",
+                "data_acquisto": "$biglietto_info.data_acquisto"
+            }
+        }
+    ]
+    
+   
+    result = collection_acquisti.aggregate(pipeline)
+    return result
+
 # Esempio di esecuzione
 if __name__ == "__main__":
     while True:
         print("\n1. Mostra concerti disponibili")
         print("2. Acquista biglietti")
-        print("3. Esci")
+        print("3. Visualizza acquisti:")
+        print("4. Esci")
         scelta = input("Seleziona un'opzione: ")
         
         if scelta == "1":
             mostra_concerti_disponibili()
         elif scelta == "2":
             acquista_biglietti()
-        elif scelta == "3":
+        elif scelta == "3": 
+            user= input("inserisci il tuo nome: ")
+            risultati = mostra_storico(user)
+            
+            if risultati:
+                for doc in risultati:
+                    print(json.dumps(doc, indent=4))
+                
+            
+        elif scelta == "4":
             break
         else:
             print("Opzione non valida.")
+            
+            
+            
+            
+''' print("""
+utente: {};
+nome_concerto: {};
+artista: {};
+luogo: {}
+data: {}
+prezzo_totale: {}
+quantità: {}
+data_acquisto: {}
+""".format(risultati.get('nome_concerto', 'N\A'),
+                  risultati.get('artista', {}).get('nome', 'N\A'),
+                  risultati.get('artista', {}).get('descrizione', 'N\A')))
+            else: 
+                print('non hai effettuato acquisti')  '''           
+            
