@@ -1,75 +1,104 @@
+from pymongo.mongo_client import MongoClient
+from pymongo.server_api import ServerApi
+import json
+import os
+from datetime import datetime
+# Connessione a MongoDB
+uri = "mongodb+srv://williamsanteramo:IlPrincipeDiMadrid.10!@cluster0.7x88wem.mongodb.net/?appName=Cluster0"
+
+# Creazione di un nuovo client e connessione al server
+client = MongoClient(uri, server_api=ServerApi('1'))
+
+# Invia un ping per confermare la connessione
+try:
+    client.admin.command('ping')
+    print("Pinged your deployment. You successfully connected to MongoDB!")
+except Exception as e:
+    print(e)
+
+# Selezione del database e delle collezioni
+db = client['ticket_one']
+collection_concerti = db['concerti']
+collection_biglietti = db['biglietti']
+collection_acquisti = db['acquisti']
+
 # Funzione per elencare i concerti con disponibilità di biglietti
-# Crea una lista di concerti che hanno ancora biglietti disponibili.
-# Utilizza una list comprehension per filtrare i concerti che hanno 
-# disponibilità_biglietti maggiore di 0.
-def mostra_concerti_disponibili():
-    concerti = [concerto for concerto in db['concerti'] if concerto["disponibilità_biglietti"] > 0]
+def mostra_concerti_disponibili(posti = 0):
+    concerti = collection_concerti.find({"disponibilità_biglietti": {"$gt": posti}})
     for concerto in concerti:
-        print(f"{concerto['_id']} - {concerto['nome_concerto']} - Disponibilità: {concerto['disponibilità_biglietti']} biglietti")
+        print(f"{concerto['nome_concerto']} - Disponibilità: {concerto['disponibilità_biglietti']} biglietti - Prezzo: {concerto['prezzo']} EUR")
 
 # Funzione per gestire l'acquisto di biglietti
 def acquista_biglietti():
     nome_concerto = input("Inserisci il nome del concerto: ")
-    # Cerca nel database un concerto il cui nome corrisponde all'input dell'utente (ignorando maiuscole/minuscole).
-    # Utilizza next per ottenere il primo risultato corrispondente, oppure None se non trova nessun concerto.
-    concerto = next((concerto for concerto in db['concerti'] if concerto["nome_concerto"].lower() == nome_concerto.lower()), None)
+    concerto = collection_concerti.find_one({"nome_concerto": nome_concerto})
     
-    # Verifica se è stato trovato un concerto e se ci sono biglietti disponibili.
     if concerto and concerto['disponibilità_biglietti'] > 0:
         print(f"Prezzo del biglietto: {concerto['prezzo']} EUR")
-        # Chiede all'utente quanti biglietti vuole acquistare e converte 
-        # l'input in un intero, memorizzandolo in num_biglietti.
-        num_biglietti = int(input("Quanti biglietti vuoi acquistare? "))
         
-        # Verifica se il numero di biglietti richiesti è maggiore della disponibilità
-        if num_biglietti > concerto['disponibilità_biglietti']:
-            print("Non ci sono abbastanza biglietti disponibili.")
-            return
+        while True:
+            num_biglietti_str = input("Quanti biglietti vuoi acquistare? (digita 'esci' per annullare) ")
+            if num_biglietti_str.lower() == 'esci':
+                print("Acquisto annullato.")
+                return
+            
+            try:
+                num_biglietti = int(num_biglietti_str)
+                if num_biglietti > concerto['disponibilità_biglietti']:
+                    print("Non ci sono abbastanza biglietti disponibili. Riprova.")
+                else:
+                    break
+            except ValueError:
+                print("Per favore, inserisci un numero valido.")
         
-        # Calcola il prezzo totale dei biglietti moltiplicando il prezzo 
-        # del biglietto per il numero di biglietti richiesti.
-        prezzo_totale = float(concerto['prezzo']) * num_biglietti
+        prezzo_totale = concerto['prezzo'] * num_biglietti
         print(f"Prezzo totale per {num_biglietti} biglietti: {prezzo_totale:.2f} EUR")
         
-        #Chiede all'utente di confermare l'acquisto
         conferma = input("Confermi l'acquisto? (si/no): ")
         if conferma.lower() != 'si':
             print("Acquisto annullato.")
             return
         
-        # Aggiorna la disponibilità dei biglietti
-        #diminuendo il numero di biglietti disponibili per il concerto acquistato
-        concerto['disponibilità_biglietti'] -= num_biglietti
-        
-        # Crea un dizionario con i dettagli dell'acquisto, inclusi il nome dell'utente,
-        # l'ID del concerto, il nome del concerto, 
-        # la quantità di biglietti e il prezzo totale.
-        acquisto = {
-            "utente": input("Inserisci il tuo nome: "),
+        collection_concerti.update_one(
+            {"_id": concerto["_id"]},
+            {"$inc": {"disponibilità_biglietti": -num_biglietti}}
+        )
+        biglietti = {
+            "utente": {
+                'nome': input("Inserisci il tuo nome: "),
+                'mail': input("Inserisci la tua Mail: ")
+                },
             "concerto_id": concerto["_id"],
             "nome_concerto": concerto['nome_concerto'],
             "quantità": num_biglietti,
-            "prezzo_totale": prezzo_totale
+            "prezzo_totale": prezzo_totale,
+            "data_acquisto": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
-        # Aggiunge il dizionario dell'acquisto alla collezione biglietti nel database.
-        db['biglietti'].append(acquisto)
+        collection_biglietti.insert_one(biglietti)
         
-        # Cerca se l'utente ha già effettuato acquisti in precedenza. 
-        # Se trova un utente con lo stesso nome, restituisce il record dell'utente,
-        # altrimenti None
-        utente = next((utente for utente in db['acquisti'] if utente["nome"] == acquisto['utente']), None)
+        acquisto = {
+            "utente": {
+                'nome': biglietti["utente"]["nome"],
+                'mail': biglietti["utente"]["mail"]
+                },
+            "storico": [biglietti["_id"]]           
+        }
         
-        # Verifica se l'utente esiste nel database degli acquisti.
+        utente = collection_acquisti.find_one({"utente.nome": acquisto['utente']['nome']})
+        
         if utente:
-            utente['storico_acquisti'].append(acquisto)
-        # Se l'utente non esiste nel database degli acquisti, 
-        # crea un nuovo record per l'utente    
+            collection_acquisti.update_one(
+                {"utente.nome": acquisto['utente']['nome']},  # Filtro per selezionare il documento da aggiornare
+                {"$push": {"storico": biglietti["_id"]}}      # Documento di aggiornamento
+                )
+        
+        #if utente:
+            #collection_acquisti.update_one(
+                #{"$push": {"storico": acquisto["storico"]}}   
+            #)
+            
         else:
-            nuovo_utente = {
-                "nome": acquisto['utente'],
-                "storico_acquisti": [acquisto]
-            }
-            db['acquisti'].append(nuovo_utente)
+            collection_acquisti.insert_one(acquisto)
         
         print("Acquisto completato con successo!")
     else:
