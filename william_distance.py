@@ -1,6 +1,7 @@
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
 import geocoder
+from geopy.geocoders import Nominatim
 
 uri = "mongodb+srv://williamsanteramo:IlPrincipeDiMadrid.10!@cluster0.7x88wem.mongodb.net/?appName=Cluster0"
 
@@ -53,11 +54,33 @@ Membri:""".format(concerto.get('nome_concerto', 'N\A'),
 
     print("Luogo: {}".format(concerto.get('luogo', {}).get('nome', 'N\A')))
     print("Data: {}".format(concerto.get('data', 'N\A')))
+  
     
+def converti_input_in_coordinate(input_posizione):
+    geolocatore = Nominatim(user_agent="my_app")
+    posizione = geolocatore.geocode(input_posizione)
     
-def concerti_vicini(posizione):
-    pass
+    if posizione:
+        return [posizione.longitude, posizione.latitude]
+    else:
+        raise Exception("Impossibile trovare le coordinate per la posizione inserita")
 
+
+def concerti_vicini(posizione):
+    concerti = collection.find({
+        'luogo.geo': {
+            '$near': {
+                '$geometry': {
+                    'type': "Point",
+                    'coordinates': posizione
+                },
+                '$maxDistance': 7000 # metri
+            }}},
+        {'_id': 0, 'artista': 1, 'nome_concerto': 1, 'luogo': 1, 'data': 1})
+    
+    return list(concerti)
+
+    
 def main():
     while True:
         print("\nMenu:")
@@ -66,47 +89,71 @@ def main():
         print("3| Trova i concerti a 7 km da te.")
         print("4| Esci")
 
-        scelta = str(input("Seleziona un'opzione: "))
+        scelta = str(input("\n> Seleziona un'opzione: "))
         
         match scelta:
             
             case '1':
-                input_artista = input("Inserisci il nome dell'artista: ")
+                print("\n<<< Inserisci il nome dell'artista: ")
+                input_artista = input("\n> ")
                 risultati_artista = ricerca_per_artista(input_artista)
                 if risultati_artista:
                     for concerto in risultati_artista:
                         mostra_concerto(concerto)
                 else:
-                    print("Non è stato trovato nessun concerto che corrisponda ai criteri di ricerca")
+                    print("\n<<< Non è stato trovato nessun concerto che corrisponda ai criteri di ricerca")
             
             case '2':
-                input_concerto = input("Inserisci il nome del concerto: ")
+                print("\n<<< Inserisci il nome del concerto: ")
+                input_concerto = input("\n> ")
                 risultati_concerto = ricerca_per_concerto(input_concerto)
 
                 if risultati_concerto:
                     for concerto in risultati_concerto:
                         mostra_concerto(concerto)
                 else:
-                    print("Non è stato trovato nessun concerto che corrisponda ai criteri di ricerca")
+                    print("\n<<< Non è stato trovato nessun concerto che corrisponda ai criteri di ricerca")
                     
             case '3':
-                print("\n<<< Vuoi condividere la tua posizione? ")
+                print("\n<<< Vuoi condividere la tua posizione? [y/n]")
                 consenso = input("\n> ").lower()
                 
-                if consenso == "si":
+                if consenso == "y":
                     posizione = geocoder.ip('me').latlng[::-1]
                     
                     risultati_distanza = concerti_vicini(posizione)
+                    
+                    if risultati_distanza:
+                        for concerto in risultati_distanza:
+                            mostra_concerto(concerto)
+                    else:
+                        print("\n<<< Non è stato trovato un concerto a 7 km da te.")
                 
                 else:
-                    print("\n<<< Per trovare concerti vicino a te, devi condividere la tua posizione...")
+                    print("\n<<< Inserisci le coordinate manualmente o il nome di una città reale per trovare i concerti nelle vicinanze.")
+                    input_posizione = input("\n> ")
+                    
+                    try:
+                        
+                        posizione = converti_input_in_coordinate(input_posizione)
+                        risultati_distanza = concerti_vicini(posizione)
+        
+                        if risultati_distanza:
+                            for concerto in risultati_distanza:
+                                mostra_concerto(concerto)
+                            
+                        else:
+                            print("\n<<< Non è stato trovato un concerto nelle vicinanze della posizione inserita.")
+    
+                    except Exception as e:
+                        print("\n<<< Errore: Impossibile trovare i concerti. Assicurati di inserire coordinate valide o il nome di una città reale.")
                     
             case '4':
-                print("\nArrivederci!")
+                print("\n<<< Arrivederci!")
                 break
             
             case _:
-                print("Opzione non valida. Riprova.")
+                print("\n<<< Opzione non valida. Riprova.")
 
 
 if __name__ == "__main__":
