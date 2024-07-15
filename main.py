@@ -40,27 +40,30 @@ def ricerca_per_concerto(concerto):
                                {'_id': 0, 'artista': 1, 'nome_concerto': 1, 'luogo': 1, 'data': 1})
     return list(concerti)
 
-
 def mostra_concerto(concerto):
     print("""
-Concerto: {};
-Artista: {};
-Descrizione: {};
-Membri:""".format(concerto.get('nome_concerto', 'N\A'),
+===============================================
+- Concerto: {}.
+- Artista: {}.
+- Descrizione: {}
+""".format(concerto.get('nome_concerto', 'N\A'),
                   concerto.get('artista', {}).get('nome', 'N\A'),
                   concerto.get('artista', {}).get('descrizione', 'N\A')))
 
     if concerto.get('artista', {}).get('tipo') == 'band':
         membri = concerto.get('artista', {}).get('membri', [])
         if membri:
+            print("\n- Membri: ")
             for membro in membri:
-                print("- Nome: {} | Strumento: {}".format(membro.get('nome',
-                      'N\A'), membro.get('strumento', 'N\A')))
+                print("\t° Nome: {} | Strumento: {}".format(membro.get('nome', 'N\A'), membro.get('strumento', 'N\A')))
         else:
             print("Nessun membro trovato.")
-
-    print("Luogo: {}".format(concerto.get('luogo', {}).get('nome', 'N\A')))
-    print("Data: {}".format(concerto.get('data', 'N\A')))
+    else:
+        print("- Strumento: {}".format(concerto.get('artista', {}).get('membri', [])[0]['strumento']))
+            
+    print("\n- Luogo: {}".format(concerto.get('luogo', {}).get('nome', 'N\A')))
+    print("- Data: {}".format(concerto.get('data', 'N\A')))
+    print("===============================================")
 
 
 def converti_input_in_coordinate(input_posizione):
@@ -126,7 +129,7 @@ def ricerca_per_intervallo_date(data_inizio, data_fine):
         return list(concerti)
 
     except Exception as e:
-        print(f"Errore durante la ricerca per intervallo di date: {e}")
+        print(f"\n<<< Errore durante la ricerca per intervallo di date: {e}")
 
         return []
 
@@ -134,7 +137,7 @@ def ricerca_per_intervallo_date(data_inizio, data_fine):
 def main():
     while True:
         print("\nMenu:")
-        print("1| Cerca concerto per artista")
+        print("\n1| Cerca concerto per artista")
         print("2| Cerca concerto per nome")
         print("3| Trova i concerti a 7 km da te.")
         print("4| Vedi i concerti per intervalli di date.")
@@ -146,7 +149,7 @@ def main():
         match scelta:
 
             case '1':
-                print("\n<<< Inserisci il nome dell'artista: ")
+                print("\n<<< Inserisci il nome dell'artista/band/membro: ")
                 input_artista = input("\n> ")
                 risultati_artista = ricerca_per_artista(input_artista)
                 if risultati_artista:
@@ -202,7 +205,7 @@ def main():
                             print(
                                 "\n<<< Non è stato trovato un concerto nelle vicinanze della posizione inserita.")
 
-                    except Exception as e:
+                    except Exception:
                         print(
                             "\n<<< Errore: Impossibile trovare i concerti. Assicurati di inserire coordinate valide o il nome di una città reale.")
 
@@ -238,14 +241,19 @@ def main():
 
 def mostra_concerti_disponibili(posti = 0):
     
-    concerti = collection_concerti.find({"disponibilità_biglietti": {"$gt": posti}})
+    concerti = list(collection_concerti.find({"disponibilità_biglietti": {"$gt": posti}}))
     for concerto in concerti:
         print(f"""
               
+===============================================   
 - Concerto: {concerto['nome_concerto']}
-- Disponibilità: {concerto['disponibilità_biglietti']} biglietti
-- Prezzo: {concerto['prezzo']} EUR""")
+- Artista/Band: {concerto['artista']['nome']}
+- Data: {concerto['data']}
 
+- Disponibilità: {concerto['disponibilità_biglietti']} biglietti
+- Prezzo: {concerto['prezzo']} EUR
+===============================================
+""")
     return concerti
 
 
@@ -261,11 +269,11 @@ def acquista_biglietti(user, risultati):
             break
     
     if concerto:
-        print(f"\n<<< Prezzo del biglietto: {concerto['prezzo']} EUR")
-        print("<<< Disponibilità: {concerto['disponibilità_biglietti']} biglietti")
+        print(f"\n° Prezzo del biglietto: {concerto['prezzo']} EUR")
+        print(f"° Disponibilità: {concerto['disponibilità_biglietti']} biglietti")
         
         while True:
-            print("\n<<< Vuoi procedere con l'acquisto? [y\n]")
+            print("\n<<< Vuoi procedere con l'acquisto? [y|n]")
             scelta = input("\n> ").lower()
             
             if scelta == "y":
@@ -281,55 +289,55 @@ def acquista_biglietti(user, risultati):
                     
                 except ValueError:
                     print("\n<<< Inserire un numero valido...")
-            
-                prezzo_totale = concerto['prezzo'] * num_biglietti
-                print(f"\n<<< Prezzo totale per {num_biglietti} biglietti: {prezzo_totale:.2f} EUR")
-                print("\n<<< Confermi l'acquisto? [y\n]: ")
-                conferma = input("\n> ").lower()
-                
-                if conferma != "y":
-                    print("\n<<< Acquisto annullato.")
-                    return
-                
-                collection_concerti.update_one(
-                    {"_id": concerto["_id"]},
-                    {"$inc": {"disponibilità_biglietti": -num_biglietti}}
-                )
-                
-                biglietti = {
-                    "utente": {
-                        'nome': user,
-                        'mail': str(input("Inserisci la tua Mail: "))
-                        },
-                    "concerto_id": concerto["_id"],
-                    "quantità": num_biglietti,
-                    "prezzo_totale": prezzo_totale,
-                    "data_acquisto": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                }
-                collection_biglietti.insert_one(biglietti)
-                
-                account = {
-                    "utente": {
-                        'nome': biglietti["utente"]["nome"],
-                        'mail': biglietti["utente"]["mail"]
-                        },
-                    "storico": [biglietti["_id"]]           
-                }
-                
-                utente = collection_utenti.find_one({"utente.nome": account['utente']['nome']})
-                
-                if utente:
-                    collection_utenti.update_one(
-                        {"utente.nome": account['utente']['nome']},  # Filtro per selezionare il documento da aggiornare
-                        {"$push": {"storico": biglietti["_id"]}}      # Documento di aggiornamento
-                        )
-                else:
-                    collection_utenti.insert_one(account)
-                
-                print("Acquisto completato con successo!")
-                
             else:
                 return
+        
+        prezzo_totale = concerto['prezzo'] * num_biglietti
+        print(f"\n<<< Prezzo totale per {num_biglietti} biglietti: {prezzo_totale:.2f} EUR")
+        print("\n<<< Confermi l'acquisto? [y|n]: ")
+        conferma = input("\n> ").lower()
+                
+        if conferma != "y":
+            print("\n<<< Acquisto annullato.")
+            return
+                
+        collection_concerti.update_one(
+            {"_id": concerto["_id"]},
+            {"$inc": {"disponibilità_biglietti": -num_biglietti}}
+            )
+                
+        biglietti = {
+            "utente": {
+                'nome': user,
+                'mail': str(input("\n<<< Inserisci la tua Mail: "))
+                },
+            "concerto_id": concerto["_id"],
+            "quantità": num_biglietti,
+            "prezzo_totale": prezzo_totale,
+            "data_acquisto": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+        
+        collection_biglietti.insert_one(biglietti)
+                
+        account = {
+            "utente": {
+                'nome': biglietti["utente"]["nome"],
+                'mail': biglietti["utente"]["mail"]
+                },
+            "storico": [biglietti["_id"]]           
+            }
+                
+        utente = collection_utenti.find_one({"utente.nome": account['utente']['nome']})
+                
+        if utente:
+            collection_utenti.update_one(
+                {"utente.nome": account['utente']['nome']},  # Filtro per selezionare il documento da aggiornare
+                {"$push": {"storico": biglietti["_id"]}}      # Documento di aggiornamento
+                )
+            print("\n<<< Acquisto completato con successo!")
+        else:
+            collection_utenti.insert_one(account)
+            print("\n<<< Acquisto completato con successo!")
         
     else:
         print("\n<<< Il nome del concerto inserito non è presente tra i disponibili.")
@@ -381,18 +389,17 @@ def mostra_storico(user):
             }
         }
     ]
-    
    
     result = collection_utenti.aggregate(pipeline)
-    return result
+    return list(result)
 
 
 def main2(user):
     while True:
-        print(f"\nBenvenuto/a {user.title()}")
-        print("1| Mostra concerti disponibili")
+        print(f"\nBenvenuta/o {user.title()}")
+        print("\n1| Mostra concerti disponibili")
         print("2| Acquista biglietti")
-        print("3| Visualizza acquisti:")
+        print("3| Visualizza acquisti")
         print("4| Tornare")
         
         scelta = input("\n> ")
@@ -401,8 +408,15 @@ def main2(user):
             
             case '1':
                 print("\n<<< Inserire il numero minimo dei posti:")
-                posti = int(input("\n> "))
-                mostra_concerti_disponibili(posti)
+                try:
+                    posti = int(input("\n> "))
+                    check = mostra_concerti_disponibili(posti)
+                    
+                    if not check:
+                        print("\n<<< Concerto inesistente per la disponibilità desiderata.")
+                
+                except ValueError:
+                    print("\n<<< Inserire un numero valido...")
             
             case '2':
                 risultati = mostra_concerti_disponibili()
@@ -413,16 +427,23 @@ def main2(user):
                 
                 if risultati:
                     
-                    print(f"\n Nome utente: {user.title()}")
-                    
+                    print(f"\nNome utente: {user.title()}")
+                    i = 0
                     for acquisto in risultati:
-                        print(f"Nome concerto: {acquisto['nome_concerto']}")
-                        print(f"Artista: {acquisto['artista']}")
-                        print(f"Luogo: {acquisto['luogo']}")
-                        print(f"Data: {acquisto['data']}")
-                        print(f"Prezzo totale: {acquisto['prezzo_totale']}")
-                        print(f"Quantità: {acquisto['quantità']}")
-                        print(f"Data acquisto: {acquisto['data_acquisto']}")
+                        i += 1
+                        print(f"""
+                              
+===============================================
+{i}° Acquisto.
+
+{i}) Nome concerto: {acquisto['nome_concerto']}
+{i}) Artista: {acquisto['artista']['nome']}
+{i}) Luogo: {acquisto['luogo']['nome']}
+{i}) Data: {acquisto['data']}
+{i}) Prezzo totale: {acquisto['prezzo_totale']:.2f} EUR
+{i}) Quantità: {acquisto['quantità']} biglietti
+{i}) Data acquisto: {acquisto['data_acquisto']}
+===============================================""")
                 
                 else:
                     print("\n<<< Non hai ancora effettuato acquisti.")
