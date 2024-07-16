@@ -5,21 +5,21 @@ L'applicazione utilizza MongoDB come database per memorizzare le informazioni su
 
 Questo progetto fornisce un'infrastruttura per:
 
-## FUNZIONALITA'
+## Funzionalità
 
 1) Ricerca concerti per:
-- Nome;
-- Artista o Band;
-- Membro della band;
-- Vicinanza geografica (massimo 7 km);
-- Intervallo di date.
+	- Nome;
+	- Artista o Band;
+	- Membro della band;
+	- Vicinanza geografica (massimo 7 km);
+	- Intervallo di date.
 
 2) Acquisto biglietti (con log-in):
-- Visualizza i concerti con disponibilità;
-- Visualizza la cronologia degli acquisti.
+	- Visualizza i concerti con disponibilità;
+	- Visualizza la cronologia degli acquisti.
 
 
-## REQUISITI
+## Requisiti
 
 Assicurati di avere installato sul tuo sistema:
 - Python 3.x;
@@ -27,10 +27,12 @@ Assicurati di avere installato sul tuo sistema:
 
 Per verificare la versione di Python, esegui il seguente comando:
 
+```cmd
 python --version
+``` 
 	
 
-## INSTALLAZIONE DELLE DIPENDENZE
+## Installazione delle dipendenze
 
 Le librerie richieste per il progetto sono elencate nel file requirements.txt.
 Assicurati di avere installato il kernel dell'editor che stai utilizzando, oltre alle librerie elencate nel file requirements.txt.
@@ -41,7 +43,7 @@ pip install -r requirements.txt
 ```    
 
 
-## AVVIO DEL PROGETTO
+## Avvio del progetto
 
 Segui questi passaggi per avviare l'applicazione Ticket_One:
 
@@ -55,7 +57,8 @@ pip install -r requirements.txt
 
 - Esegui il file principale dell'applicazione per avviare il sistema di gestione dei biglietti.
 
-## Struttura del Progetto
+
+## Struttura del progetto
 
 Il progetto è strutturato per consentire la ricerca e l'acquisto di biglietti per concerti, utilizzando MongoDB per memorizzare le informazioni.
 
