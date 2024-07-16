@@ -1,7 +1,5 @@
 # MongoCraft
 
-## DESCRIZIONE
-
 Ticket_One è un'applicazione CLI sviluppata in Python che consente agli utenti di cercare e acquistare biglietti per concerti.
 L'applicazione utilizza MongoDB come database per memorizzare le informazioni sui concerti, la disponibilità dei biglietti e i prezzi.
 
